@@ -17,6 +17,6 @@ Excel file must contains Columns: **Nome**, **Telefono**
 
 > Warning
 >
-> Correct Nome column format: Surname, Name
+> Correct Nome column format: \[Surname Name\]
 
 ![image](https://github.com/user-attachments/assets/96d37ade-d77b-42cd-86a2-5c745a64091a)
