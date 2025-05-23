@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to vCard Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .drop-zone {
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: #e8f2ff;
+            transform: scale(1.02);
+        }
+
+        .drop-zone-content {
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .drop-text {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .drop-hint {
+            color: #666;
+            font-size: 1em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .convert-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e1e5e9;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 15px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .skipped-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .skipped-item {
+            padding: 8px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .drop-zone {
+                padding: 40px 15px;
+            }
+            
+            .upload-icon {
+                font-size: 3em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Excel to vCard</h1>
+        <p class="subtitle">Converti facilmente i tuoi contatti Excel in formato vCard</p>
+        
+        <div class="form-group">
+            <label for="storeNameInput">Nome del Negozio:</label>
+            <input type="text" id="storeNameInput" placeholder="Inserisci il nome del tuo negozio..." required>
+        </div>
+
+        <div class="form-group">
+            <label>File Excel:</label>
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <div class="upload-icon">📄</div>
+                    <div class="drop-text">Trascina qui il file Excel</div>
+                    <div class="drop-hint">oppure clicca per selezionare</div>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <div class="file-info" id="fileInfo"></div>
+        </div>
+
+        <button class="convert-btn" id="convertBtn" disabled>
+            Converti in vCard
+        </button>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+
+        <div class="results" id="results">
+            <div class="stats" id="stats"></div>
+            <button class="download-btn" id="downloadBtn">
+                📥 Scarica File vCard
+            </button>
+            <div class="skipped-list" id="skippedList"></div>
+        </div>
+    </div>
+
+    <script>
+        let excelData = null;
+        let vcardContent = '';
+        let processedStats = {};
+
+        // Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const storeNameInput = document.getElementById('storeNameInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const results = document.getElementById('results');
+        const errorMsg = document.getElementById('errorMsg');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const stats = document.getElementById('stats');
+        const skippedList = document.getElementById('skippedList');
+
+        // Drag and drop functionality
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        convertBtn.addEventListener('click', convertToVCard);
+        downloadBtn.addEventListener('click', downloadVCard);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showError('Seleziona un file Excel valido (.xlsx o .xls)');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    excelData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    showFileInfo(file, excelData.length);
+                    checkFormValidity();
+                    hideError();
+                } catch (error) {
+                    showError('Errore nella lettura del file Excel: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showFileInfo(file, rowCount) {
+            fileInfo.innerHTML = `
+                <strong>📄 ${file.name}</strong><br>
+                <span style="color: #666;">Dimensione: ${(file.size / 1024).toFixed(1)} KB | Righe trovate: ${rowCount}</span>
+            `;
+            fileInfo.classList.add('show');
+        }
+
+        function checkFormValidity() {
+            const hasFile = excelData !== null;
+            const hasStoreName = storeNameInput.value.trim() !== '';
+            convertBtn.disabled = !(hasFile && hasStoreName);
+        }
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+        }
+
+        function hideError() {
+            errorMsg.classList.remove('show');
+        }
+
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+        }
+
+        function cleanPhoneNumber(phone) {
+            if (!phone) return '';
+            const phoneStr = String(phone).trim();
+            return phoneStr.replace(/[^0-9+]/g, '');
+        }
+
+        function splitName(fullName) {
+            if (!fullName) return ['', ''];
+            const nameParts = String(fullName).trim().split(/\s+/);
+            if (nameParts.length === 0) return ['', ''];
+            if (nameParts.length === 1) return [nameParts[0], ''];
+            
+            const cognome = nameParts[0];
+            const nome = nameParts.slice(1).join(' ');
+            return [nome, cognome];
+        }
+
+        function createVCard(nome, cognome, telefono, nomeNegozio) {
+            const vcard = [
+                'BEGIN:VCARD',
+                'VERSION:3.0'
+            ];
+
+            const fullName = `${nome} ${cognome}`.trim();
+            if (fullName) {
+                vcard.push(`FN:${fullName}`);
+            }
+
+            vcard.push(`N:${cognome};${nome};;;`);
+
+            if (telefono) {
+                vcard.push(`TEL;TYPE=CELL:${telefono}`);
+            }
+
+            if (nomeNegozio) {
+                vcard.push(`ORG:${nomeNegozio}`);
+            }
+
+            vcard.push('END:VCARD');
+            return vcard.join('\n');
+        }
+
+        async function convertToVCard() {
+            if (!excelData || !storeNameInput.value.trim()) return;
+
+            const storeName = storeNameInput.value.trim();
+            let processed = 0;
+            let skipped = 0;
+            const skippedItems = [];
+            const allVCards = [];
+
+            progressBar.style.display = 'block';
+            results.classList.remove('show');
+            convertBtn.disabled = true;
+
+            for (let i = 0; i < excelData.length; i++) {
+                const row = excelData[i];
+                const fullName = row['Nome'] || row['nome'] || row['NOME'];
+                const telefono = row['telefono'] || row['Telefono'] || row['TELEFONO'];
+
+                // Update progress
+                updateProgress((i / excelData.length) * 100);
+
+                // Skip empty names
+                if (!fullName || String(fullName).trim() === '') {
+                    skipped++;
+                    continue;
+                }
+
+                const fullNameStr = String(fullName).trim();
+
+                // Skip names with numbers
+                if (/\d/.test(fullNameStr)) {
+                    skipped++;
+                    skippedItems.push(`${fullNameStr} (contiene numeri)`);
+                    continue;
+                }
+
+                // Process the contact
+                const [nome, cognome] = splitName(fullNameStr);
+                const cleanPhone = cleanPhoneNumber(telefono);
+                const vcard = createVCard(nome, cognome, cleanPhone, storeName);
+                
+                allVCards.push(vcard);
+                processed++;
+
+                // Small delay for visual effect
+                if (i % 10 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+            }
+
+            updateProgress(100);
+            vcardContent = allVCards.join('\n\n');
+
+            processedStats = {
+                processed: processed,
+                skipped: skipped,
+                skippedItems: skippedItems
+            };
+
+            showResults();
+            convertBtn.disabled = false;
+            progressBar.style.display = 'none';
+        }
+
+        function showResults() {
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${processedStats.processed}</div>
+                    <div class="stat-label">Contatti Processati</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${processedStats.skipped}</div>
+                    <div class="stat-label">Contatti Scartati</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${excelData.length}</div>
+                    <div class="stat-label">Totale Righe</div>
+                </div>
+            `;
+
+            if (processedStats.skippedItems.length > 0) {
+                skippedList.innerHTML = `
+                    <h4 style="margin-bottom: 10px; color: #856404;">Contatti Scartati:</h4>
+                    ${processedStats.skippedItems.map(item => `<div class="skipped-item">${item}</div>`).join('')}
+                `;
+            } else {
+                skippedList.innerHTML = '';
+            }
+
+            results.classList.add('show');
+        }
+
+        function downloadVCard() {
+            if (!vcardContent) return;
+
+            const blob = new Blob([vcardContent], { type: 'text/vcard;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contatti_${storeNameInput.value.trim().replace(/[^a-zA-Z0-9]/g, '_')}.vcf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Check form validity on store name input
+        storeNameInput.addEventListener('input', checkFormValidity);
+
+        // Initialize
+        checkFormValidity();
+    </script>
+</body>
+</html>
